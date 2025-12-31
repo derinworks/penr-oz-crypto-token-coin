@@ -1,11 +1,11 @@
-name: Pytest
+name: CI
 
 on:
   push:
   pull_request:
 
 jobs:
-  test:
+  lint-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -33,6 +33,15 @@ jobs:
 
       - name: Install dependencies
         run: poetry install --no-interaction --with dev
+
+      - name: Run Ruff
+        run: poetry run ruff check .
+
+      - name: Run Flake8
+        run: poetry run flake8 .
+
+      - name: Run Black
+        run: poetry run black --check .
 
       - name: Run tests
         run: poetry run pytest

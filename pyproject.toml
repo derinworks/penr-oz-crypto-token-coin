@@ -14,6 +14,15 @@ pydantic = "^2.0.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"
 httpx = "^0.27.0"
+ruff = "^0.9.0"
+flake8 = "^7.0.0"
+black = "^24.0.0"
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
 
 [build-system]
 requires = ["poetry-core"]

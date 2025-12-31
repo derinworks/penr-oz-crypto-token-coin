@@ -18,12 +18,16 @@ def health():
 def send_transaction(transaction: Transaction):
     if transaction.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be greater than 0")
-    
+
     if transaction.sender == transaction.receiver:
-        raise HTTPException(status_code=400, detail="Sender and receiver must be different")
-        
+        raise HTTPException(
+            status_code=400, detail="Sender and receiver must be different"
+        )
+
     if not transaction.sender or not transaction.receiver:
-        raise HTTPException(status_code=400, detail="Sender and receiver cannot be empty")
+        raise HTTPException(
+            status_code=400, detail="Sender and receiver cannot be empty"
+        )
 
     pending_transactions.append(transaction)
     return {"status": "pending"}
