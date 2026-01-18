@@ -130,8 +130,14 @@ async def get_latest_block() -> Block:
         )
 
 
-async def submit_block(block: Block) -> bool:
-    """Submit mined block to Blockchain service"""
+async def submit_block(block: Block):
+    """
+    Submit mined block to Blockchain service.
+
+    Raises:
+        HTTPException(503): If blockchain service is unavailable or returns 5xx
+        HTTPException(400): If block is rejected due to validation (4xx response)
+    """
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -141,12 +147,36 @@ async def submit_block(block: Block) -> bool:
             )
             response.raise_for_status()
             logger.info(f"Block {block.index} submitted successfully")
-            return True
-    except httpx.HTTPError as e:
-        logger.error(f"Failed to submit block: {e}")
-        if hasattr(e, "response") and e.response is not None:
+    except httpx.TimeoutException as e:
+        logger.error(f"Blockchain service timeout: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Blockchain service timeout - please retry",
+        )
+    except httpx.HTTPStatusError as e:
+        # HTTP error with response
+        if e.response.status_code >= 500:
+            # Server error from blockchain service
+            logger.error(f"Blockchain service error: {e.response.status_code}")
+            raise HTTPException(
+                status_code=503,
+                detail=f"Blockchain service error: {e.response.text}",
+            )
+        else:
+            # 4xx error - validation failed
+            logger.error(f"Block rejected: {e.response.status_code}")
             logger.error(f"Response: {e.response.text}")
-        return False
+            raise HTTPException(
+                status_code=400,
+                detail=f"Block rejected by blockchain: {e.response.text}",
+            )
+    except httpx.RequestError as e:
+        # Network errors, connection failures
+        logger.error(f"Failed to connect to blockchain service: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Blockchain service unavailable - please retry",
+        )
 
 
 async def remove_mined_transactions(transactions: List[Transaction]):
@@ -240,14 +270,9 @@ async def mine_block():
     )
 
     # Step 5: Submit block to blockchain
-    success = await submit_block(mined_block)
-
-    if not success:
-        logger.error("Block was rejected by blockchain service")
-        raise HTTPException(
-            status_code=400,
-            detail="Block rejected by blockchain service",
-        )
+    # Raises HTTPException(503) for service errors or
+    # HTTPException(400) for validation errors
+    await submit_block(mined_block)
 
     # Step 6: Remove only the transactions that were included in this block
     # (excluding coinbase, which wasn't in the pending pool)
