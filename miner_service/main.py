@@ -77,7 +77,8 @@ def proof_of_work(
         # Check if hash meets difficulty requirement
         if hash_value.startswith(DIFFICULTY_PREFIX):
             logger.info(
-                f"Valid hash found! Nonce: {nonce}, Hash: {hash_value}, Attempts: {attempts}"
+                f"Valid hash found! Nonce: {nonce}, Hash: {hash_value}, "
+                f"Attempts: {attempts}"
             )
             return nonce, hash_value, attempts
 
