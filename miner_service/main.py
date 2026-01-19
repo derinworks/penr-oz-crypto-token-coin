@@ -285,7 +285,10 @@ async def mine_block():
     new_index = latest_block.index + 1
     timestamp = time.time()
 
-    nonce, hash_value, attempts = proof_of_work(
+    # Run PoW in background thread to prevent blocking the event loop
+    # This allows other endpoints (/health, /miner/stats) to remain responsive
+    nonce, hash_value, attempts = await asyncio.to_thread(
+        proof_of_work,
         index=new_index,
         timestamp=timestamp,
         transactions=all_transactions,
