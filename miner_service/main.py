@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import logging
@@ -184,23 +185,55 @@ async def remove_mined_transactions(transactions: List[Transaction]):
     Remove specific transactions from Transaction service.
     Only removes transactions that were included in the mined block,
     preserving any new transactions that arrived during mining.
+
+    Retries with exponential backoff to ensure transaction pool consistency.
+
+    Raises:
+        HTTPException(503): If removal fails after all retry attempts
     """
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{TRANSACTION_SERVICE_URL}/transaction/remove",
-                json=[tx.model_dump() for tx in transactions],
-                timeout=10.0,
+    max_retries = 3
+    base_delay = 1.0  # seconds
+
+    for attempt in range(max_retries):
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{TRANSACTION_SERVICE_URL}/transaction/remove",
+                    json=[tx.model_dump() for tx in transactions],
+                    timeout=10.0,
+                )
+                response.raise_for_status()
+                result = response.json()
+                logger.info(
+                    f"Removed {result.get('count', 0)} mined transactions "
+                    f"from pending pool"
+                )
+                return  # Success - exit function
+
+        except httpx.HTTPError as e:
+            logger.error(
+                f"Failed to remove mined transactions (attempt {attempt + 1}/"
+                f"{max_retries}): {e}"
             )
-            response.raise_for_status()
-            result = response.json()
-            logger.info(
-                f"Removed {result.get('count', 0)} mined transactions "
-                f"from pending pool"
-            )
-    except httpx.HTTPError as e:
-        logger.error(f"Failed to remove mined transactions: {e}")
-        # Non-critical error, continue anyway
+
+            if attempt < max_retries - 1:
+                # Wait before retrying (exponential backoff)
+                delay = base_delay * (2**attempt)
+                logger.info(f"Retrying in {delay}s...")
+                await asyncio.sleep(delay)
+            else:
+                # All retries exhausted
+                logger.error(
+                    "All retry attempts exhausted. Transaction pool may be "
+                    "inconsistent - manual cleanup may be required."
+                )
+                raise HTTPException(
+                    status_code=503,
+                    detail=(
+                        "Block mined successfully but failed to update "
+                        "transaction pool. Manual cleanup may be required."
+                    ),
+                )
 
 
 @app.get("/health")
