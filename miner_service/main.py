@@ -24,10 +24,8 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 # Environment variables for service URLs
-TRANSACTION_SERVICE_URL = os.getenv(
-    "TRANSACTION_SERVICE_URL", "http://transaction:8000"
-)
-BLOCKCHAIN_SERVICE_URL = os.getenv("BLOCKCHAIN_SERVICE_URL", "http://blockchain:8000")
+TRANSACTION_SERVICE_URL = os.getenv("TRANSACTION_SERVICE_URL", "http://localhost:8001")
+BLOCKCHAIN_SERVICE_URL = os.getenv("BLOCKCHAIN_SERVICE_URL", "http://localhost:8002")
 MINER_ADDRESS = os.getenv("MINER_ADDRESS", "MINER_REWARD_ADDRESS")
 
 # Mining statistics

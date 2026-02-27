@@ -1,0 +1,8 @@
+WALLET_CREATE_PATH = "/wallet/create"
+TRANSACTION_SEND_PATH = "/transaction/send"
+TRANSACTION_PENDING_PATH = "/transaction/pending"
+BLOCKCHAIN_PATH = "/blockchain"
+BLOCKCHAIN_BALANCE_PATH = "/blockchain/balance"
+BLOCKCHAIN_VALIDATE_PATH = "/blockchain/validate"
+MINER_STATS_PATH = "/miner/stats"
+MINE_PATH = "/mine"

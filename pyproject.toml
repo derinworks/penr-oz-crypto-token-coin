@@ -24,6 +24,11 @@ line-length = 88
 [tool.ruff]
 line-length = 88
 
+[tool.pytest.ini_options]
+markers = [
+    "integration: end-to-end tests requiring all services to be running",
+]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
