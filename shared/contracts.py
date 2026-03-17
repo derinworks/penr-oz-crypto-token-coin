@@ -15,7 +15,6 @@ from pydantic import BaseModel
 from .models.block import Block
 from .models.transaction import Transaction
 
-
 # --- Transaction Service Contracts ---
 
 

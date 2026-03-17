@@ -9,7 +9,6 @@ from shared.constants import DIFFICULTY_PREFIX
 from shared.contracts import AddBlockRequest, AddBlockResponse, BalanceResponse
 from shared.models.block import Block
 
-
 app = FastAPI()
 
 
