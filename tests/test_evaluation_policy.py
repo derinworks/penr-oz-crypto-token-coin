@@ -66,10 +66,14 @@ class TestNormalize:
         assert normalize(0.0, raw_score_max=10.0) == 0.0
 
     def test_invalid_raw_score_max(self):
-        with pytest.raises(ValueError, match="positive"):
+        with pytest.raises(ValueError, match="finite positive"):
             normalize(50.0, raw_score_max=0.0)
-        with pytest.raises(ValueError, match="positive"):
+        with pytest.raises(ValueError, match="finite positive"):
             normalize(50.0, raw_score_max=-5.0)
+
+    def test_inf_raw_score_max_rejected(self):
+        with pytest.raises(ValueError, match="finite positive"):
+            normalize(50.0, raw_score_max=math.inf)
 
     def test_nan_raw_score_rejected(self):
         with pytest.raises(ValueError, match="NaN"):

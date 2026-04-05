@@ -91,8 +91,10 @@ def normalize(raw_score: float, raw_score_max: float = DEFAULT_RAW_SCORE_MAX) ->
     ValueError
         If *raw_score_max* is not positive.
     """
-    if not (raw_score_max > 0):
-        raise ValueError(f"raw_score_max must be positive, got {raw_score_max}")
+    if not (0 < raw_score_max < float("inf")):
+        raise ValueError(
+            f"raw_score_max must be a finite positive number, got {raw_score_max}"
+        )
     if isnan(raw_score):
         raise ValueError("raw_score cannot be NaN")
 
@@ -102,8 +104,8 @@ def normalize(raw_score: float, raw_score_max: float = DEFAULT_RAW_SCORE_MAX) ->
     # 2. Scale to [0, 1]
     continuous = clamped / raw_score_max
 
-    # 3. Discretize – round half-up to nearest tenth using integer arithmetic
-    #    to avoid Banker's Rounding and floating-point edge cases.
+    # 3. Discretize – round half-up to nearest tenth via floor(x + 0.5)
+    #    to avoid Banker's Rounding behaviour of Python's built-in round().
     nearest_index = floor(continuous * 10 + 0.5)
     return ALLOWED_SCORES[nearest_index]
 
