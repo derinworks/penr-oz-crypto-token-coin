@@ -34,9 +34,10 @@ randomness, floating-point tolerance heuristics, or external state are
 involved.
 """
 
+from math import floor
 from typing import List, Tuple
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # ---------------------------------------------------------------------------
 # Policy constants
@@ -87,8 +88,9 @@ def normalize(raw_score: float, raw_score_max: float = DEFAULT_RAW_SCORE_MAX) ->
     # 2. Scale to [0, 1]
     continuous = clamped / raw_score_max
 
-    # 3. Discretize – round to nearest tenth
-    nearest_index = round(continuous * 10)
+    # 3. Discretize – round half-up to nearest tenth using integer arithmetic
+    #    to avoid Banker's Rounding and floating-point edge cases.
+    nearest_index = floor(continuous * 10 + 0.5)
     return ALLOWED_SCORES[nearest_index]
 
 
@@ -97,13 +99,22 @@ def normalize(raw_score: float, raw_score_max: float = DEFAULT_RAW_SCORE_MAX) ->
 # ---------------------------------------------------------------------------
 
 
-class EvaluationResult(BaseModel):
+class EvaluationResult(BaseModel, frozen=True):
     """Immutable record produced by :func:`evaluate`."""
 
     raw_score: float
     normalized_score: float = Field(ge=0.0, le=1.0)
     raw_score_max: float = Field(gt=0)
     policy_version: str
+
+    @field_validator("normalized_score")
+    @classmethod
+    def must_be_allowed_score(cls, v: float) -> float:
+        if v not in ALLOWED_SCORES:
+            raise ValueError(
+                f"normalized_score must be one of {ALLOWED_SCORES}, got {v}"
+            )
+        return v
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 """Unit tests for the deterministic AI evaluation policy."""
 
 import pytest
+from pydantic import ValidationError
 
 from shared.evaluation_policy import (
     ALLOWED_SCORES,
@@ -46,10 +47,10 @@ class TestNormalize:
     def test_rounds_to_nearest_tenth(self):
         # 74 / 100 = 0.74 → rounds to 0.7
         assert normalize(74.0) == 0.7
-        # 75 / 100 = 0.75 → rounds to 0.8 (banker's rounding: 7.5 → 8)
+        # 75 / 100 = 0.75 → rounds half-up to 0.8
         assert normalize(75.0) == 0.8
-        # 85 / 100 = 0.85 → rounds to 0.8 (banker's rounding: 8.5 → 8)
-        assert normalize(85.0) == 0.8
+        # 85 / 100 = 0.85 → rounds half-up to 0.9
+        assert normalize(85.0) == 0.9
 
     def test_clamps_below_zero(self):
         assert normalize(-10.0) == 0.0
@@ -122,14 +123,14 @@ class TestEvaluationResultModel:
     """Verify EvaluationResult Pydantic constraints."""
 
     def test_normalized_score_bounds(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             EvaluationResult(
                 raw_score=50.0,
                 normalized_score=1.5,
                 raw_score_max=100.0,
                 policy_version="1.0.0",
             )
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             EvaluationResult(
                 raw_score=50.0,
                 normalized_score=-0.1,
@@ -138,13 +139,27 @@ class TestEvaluationResultModel:
             )
 
     def test_raw_score_max_must_be_positive(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             EvaluationResult(
                 raw_score=50.0,
                 normalized_score=0.5,
                 raw_score_max=0.0,
                 policy_version="1.0.0",
             )
+
+    def test_normalized_score_must_be_allowed(self):
+        with pytest.raises(ValidationError, match="must be one of"):
+            EvaluationResult(
+                raw_score=50.0,
+                normalized_score=0.55,
+                raw_score_max=100.0,
+                policy_version="1.0.0",
+            )
+
+    def test_immutability(self):
+        result = evaluate(50.0)
+        with pytest.raises(ValidationError):
+            result.normalized_score = 0.9
 
 
 class TestPolicyVersion:
