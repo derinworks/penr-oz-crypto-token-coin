@@ -34,7 +34,7 @@ randomness, floating-point tolerance heuristics, or external state are
 involved.
 """
 
-from math import floor
+from math import floor, isnan
 from typing import List, Tuple
 
 from pydantic import BaseModel, Field, field_validator
@@ -47,7 +47,19 @@ POLICY_VERSION: str = "1.0.0"
 """Semantic version of the evaluation policy.  Any change to the
 normalization logic MUST bump this version."""
 
-ALLOWED_SCORES: Tuple[float, ...] = tuple(round(i * 0.1, 1) for i in range(11))
+ALLOWED_SCORES: Tuple[float, ...] = (
+    0.0,
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    0.9,
+    1.0,
+)
 """Explicit discrete score set: 0.0, 0.1, … , 1.0."""
 
 DEFAULT_RAW_SCORE_MAX: float = 100.0
@@ -79,8 +91,10 @@ def normalize(raw_score: float, raw_score_max: float = DEFAULT_RAW_SCORE_MAX) ->
     ValueError
         If *raw_score_max* is not positive.
     """
-    if raw_score_max <= 0:
+    if not (raw_score_max > 0):
         raise ValueError(f"raw_score_max must be positive, got {raw_score_max}")
+    if isnan(raw_score):
+        raise ValueError("raw_score cannot be NaN")
 
     # 1. Clamp
     clamped = max(0.0, min(raw_score, raw_score_max))
@@ -105,7 +119,7 @@ class EvaluationResult(BaseModel, frozen=True):
     raw_score: float
     normalized_score: float = Field(ge=0.0, le=1.0)
     raw_score_max: float = Field(gt=0)
-    policy_version: str
+    policy_version: str = POLICY_VERSION
 
     @field_validator("normalized_score")
     @classmethod
@@ -147,7 +161,6 @@ def evaluate(
         raw_score=raw_score,
         normalized_score=normalized,
         raw_score_max=raw_score_max,
-        policy_version=POLICY_VERSION,
     )
 
 

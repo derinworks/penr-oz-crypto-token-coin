@@ -1,5 +1,7 @@
 """Unit tests for the deterministic AI evaluation policy."""
 
+import math
+
 import pytest
 from pydantic import ValidationError
 
@@ -68,6 +70,18 @@ class TestNormalize:
             normalize(50.0, raw_score_max=0.0)
         with pytest.raises(ValueError, match="positive"):
             normalize(50.0, raw_score_max=-5.0)
+
+    def test_nan_raw_score_rejected(self):
+        with pytest.raises(ValueError, match="NaN"):
+            normalize(float("nan"))
+
+    def test_nan_raw_score_max_rejected(self):
+        with pytest.raises(ValueError, match="positive"):
+            normalize(50.0, raw_score_max=float("nan"))
+
+    def test_inf_raw_score_clamped(self):
+        assert normalize(math.inf) == 1.0
+        assert normalize(-math.inf) == 0.0
 
     def test_result_always_in_allowed_set(self):
         """Sweep many raw values and confirm every output is allowed."""
@@ -160,6 +174,14 @@ class TestEvaluationResultModel:
         result = evaluate(50.0)
         with pytest.raises(ValidationError):
             result.normalized_score = 0.9
+
+    def test_default_policy_version(self):
+        result = EvaluationResult(
+            raw_score=50.0,
+            normalized_score=0.5,
+            raw_score_max=100.0,
+        )
+        assert result.policy_version == POLICY_VERSION
 
 
 class TestPolicyVersion:
