@@ -1,4 +1,4 @@
-from . import constants, contracts
+from . import constants, contracts, evaluation_policy
 from .models import (
     AIWorkEvaluation,
     AIWorkSubmission,
@@ -19,4 +19,5 @@ __all__ = [
     "Wallet",
     "constants",
     "contracts",
+    "evaluation_policy",
 ]
