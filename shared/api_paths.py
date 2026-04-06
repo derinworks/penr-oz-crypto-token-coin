@@ -1,4 +1,5 @@
 WALLET_CREATE_PATH = "/wallet/create"
+WALLET_BALANCE_PATH = "/wallet/{address}/balance"
 TRANSACTION_SEND_PATH = "/transaction/send"
 TRANSACTION_PENDING_PATH = "/transaction/pending"
 BLOCKCHAIN_PATH = "/blockchain"
