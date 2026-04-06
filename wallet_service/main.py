@@ -33,6 +33,7 @@ def get_wallet(address: str):
 
 @app.get("/wallet/{address}/balance")
 def get_wallet_balance(address: str):
-    if address not in wallets:
+    wallet = wallets.get(address)
+    if not wallet:
         raise HTTPException(status_code=404, detail="Wallet not found")
-    return {"address": address, "balance": wallets[address].balance}
+    return {"address": address, "balance": wallet.balance}
