@@ -49,6 +49,23 @@ def test_get_wallet_not_found():
     assert response.status_code == 404
 
 
+def test_get_wallet_balance():
+    create_response = client.post("/wallet/create")
+    address = create_response.json()["address"]
+
+    response = client.get(f"/wallet/{address}/balance")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["address"] == address
+    assert data["balance"] == 0.0
+
+
+def test_get_wallet_balance_not_found():
+    fake = "a" * 64
+    response = client.get(f"/wallet/{fake}/balance")
+    assert response.status_code == 404
+
+
 def test_create_multiple_wallets():
     addresses = []
     for _ in range(3):
