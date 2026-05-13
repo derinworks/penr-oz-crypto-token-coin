@@ -2,10 +2,53 @@ version: "3.9"
 
 services:
   wallet:
-    build: .
+    build:
+      context: .
+      dockerfile: wallet_service/Dockerfile
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
   transaction:
-    build: .
+    build:
+      context: .
+      dockerfile: transaction_service/Dockerfile
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
   blockchain:
-    build: .
+    build:
+      context: .
+      dockerfile: blockchain_service/Dockerfile
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
   miner:
-    build: .
+    build:
+      context: .
+      dockerfile: miner_service/Dockerfile
+    environment:
+      - TRANSACTION_SERVICE_URL=http://transaction:8001
+      - BLOCKCHAIN_SERVICE_URL=http://blockchain:8002
+    depends_on:
+      transaction:
+        condition: service_healthy
+      blockchain:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s

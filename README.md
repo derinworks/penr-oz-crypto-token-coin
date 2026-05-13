@@ -18,6 +18,39 @@ with no business logic yet.
 The `shared/` package contains locked contracts (constants and Pydantic models) that are
 imported by each service.
 
+
+## Running with Docker Compose
+
+The base `docker-compose.yml` intentionally does **not** publish service ports to the
+host. This keeps services internal to the Docker network by default.
+
+To expose services on localhost for manual testing:
+
+1. Copy the example override file:
+
+   ```bash
+   cp docker-compose.override.yaml.example docker-compose.override.yaml
+   ```
+
+2. Start the stack (Compose automatically loads both files):
+
+   ```bash
+   docker compose up --build
+   ```
+
+3. Access services on localhost:
+
+   - Wallet: `http://127.0.0.1:8000`
+   - Transaction: `http://127.0.0.1:8001`
+   - Blockchain: `http://127.0.0.1:8002`
+   - Miner: `http://127.0.0.1:8003`
+
+4. Stop services:
+
+   ```bash
+   docker compose down
+   ```
+
 ## Running Tests
 
 ### Unit tests
