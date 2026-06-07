@@ -36,13 +36,23 @@ def send_transaction(transaction: Transaction):
 
 @app.get("/transaction/pending", response_model=PendingTransactionsResponse)
 def get_pending_transactions(
-    skip: Optional[int] = Query(0, ge=0, description="Number of pending transactions to skip for pagination"),
-    limit: Optional[int] = Query(100, ge=1, le=1000, description="Maximum number of pending transactions to return (default 100)"),
+    skip: int = Query(
+        0, ge=0, description="Number of pending transactions to skip for pagination"
+    ),
+    limit: Optional[int] = Query(
+        None,
+        ge=1,
+        le=1000,
+        description="Maximum number of pending transactions to return (default: all)",
+    ),
 ):
     """Return pending transactions, optionally paginated.
 
-    This is an optional enhancement per issue #17. Pagination parameters are
-    optional; defaults provide backward-compatible behavior for existing callers.
+    This is an optional enhancement per issue #17.
+
+    - When `limit` is omitted (or None), all pending transactions from `skip` onward
+      are returned (full backward compatibility).
+    - `skip` defaults to 0.
     """
     total = len(pending_transactions)
     start = skip
