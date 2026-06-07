@@ -10,7 +10,7 @@ with no business logic yet. It also serves as the foundation for experimenting w
 
 ## Why AI Work Token?
 
-Traditional Proof-of-Work is energy-intensive and not particularly useful. An AI Work Token turns computational effort into productive, verifiable contributions (bug fixes, features, documentation, research, etc.) that advance a project.
+Traditional Proof-of-Work is energy-intensive and not particularly useful. An AI Work Token turns computational effort into productive, verifiable contributions (bug fixes, features, documentation, research, etc.) that advance the project.
 
 ## AI Work Flow (Conceptual)
 
@@ -31,12 +31,12 @@ For fair token rewards, work evaluation must be deterministic. The POC explores 
 - Blockchain service
 - Miner service
 
-## POC Scope and Non-Goals (AI Work Token)
+## Shared contracts
 
-- **In Scope**: Basic monorepo structure, Docker setup, service skeletons, AI agent experiments
-- **Non-Goals**: Production readiness, real economic value, complex AI evaluation models (this is a starting point)
+The `shared/` package contains locked contracts (constants and Pydantic models) that are
+imported by each service.
 
-## Running with Docker Compose
+## Running with Docker Compose (instructions)
 
 The base `docker-compose.yml` intentionally does **not** publish service ports to the
 host. This keeps services internal to the Docker network by default.
@@ -67,12 +67,6 @@ To expose services on localhost for manual testing:
    docker compose down
    ```
 
-## Future Directions (AI Work Token)
-
-- Advanced AI agent orchestration
-- On-chain work verification
-- Decentralized review mechanisms
-
 ## Running Tests
 
 ### Unit tests
@@ -89,4 +83,39 @@ The `tests/` directory contains an end-to-end integration test that validates th
 Wallet → Transaction → Miner → Blockchain flow using real HTTP calls. All four services
 must be running before you execute these tests.
 
-(See the main branch for complete instructions.)
+1. Start each service on its own port using `uvicorn`:
+
+   ```bash
+   poetry run uvicorn wallet_service.main:app --port 8000 &
+   poetry run uvicorn transaction_service.main:app --port 8001 &
+   poetry run uvicorn blockchain_service.main:app --port 8002 &
+   poetry run uvicorn miner_service.main:app --port 8003 &
+   ```
+
+2. If needed, override service URLs through environment variables (defaults shown):
+
+   ```bash
+   export WALLET_SERVICE_URL=http://localhost:8000
+   export TRANSACTION_SERVICE_URL=http://localhost:8001
+   export BLOCKCHAIN_SERVICE_URL=http://localhost:8002
+   export MINER_SERVICE_URL=http://localhost:8003
+   ```
+
+3. Run the integration tests:
+
+   ```bash
+   poetry run pytest -m integration
+   ```
+
+The tests are marked with `@pytest.mark.integration` so they are excluded from the
+default CI pipeline and only run when services are available.
+
+## Future Directions (AI Work Token)
+
+- Advanced AI agent orchestration
+- On-chain work verification
+- Decentralized review mechanisms
+
+## About
+
+Implementation of TokenCoin cryptocurrency (with AI Work Token experiments)
