@@ -149,7 +149,15 @@ def add_block(request: AddBlockRequest):
 
 @app.get("/blockchain/balance/{address}", response_model=BalanceResponse)
 def get_balance(address: str):
-    """Get the balance of a wallet address by scanning the blockchain"""
+    """Get the balance of a wallet address by scanning the blockchain.
+
+    Implements https://github.com/derinworks/penr-oz-crypto-token-coin/issues/20
+    Scans the chain to compute:
+    - + amount where receiver == address
+    - - amount where sender == address
+
+    Returns correct balance results and handles addresses with no history (balance=0).
+    """
     balance = 0.0
     for block in blockchain.get_chain():
         for tx in block.transactions:
