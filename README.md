@@ -2,11 +2,11 @@
 
 > **Warning**: This is a POC to explore concepts; do not use for real value or production.
 
-## Overview
+## Project overview
 
-The PENR-OZ project is a Proof of Concept (POC) for an **AI Work Token** cryptocurrency. It demonstrates a system where AI agents perform verifiable "work" (code changes, documentation, testing, etc.), and that work is evaluated and rewarded with tokens.
-
-This repository serves as the monorepo skeleton for the core services and shared smart contracts.
+This repository is a Python monorepo skeleton for a mini cryptocurrency project built with
+FastAPI-based microservices. It contains shared contracts and service entrypoints only,
+with no business logic yet. It also serves as the foundation for experimenting with **AI Work Token** concepts.
 
 ## Why AI Work Token?
 
@@ -26,56 +26,67 @@ For fair token rewards, work evaluation must be deterministic. The POC explores 
 
 ## Services
 
-- **API Service**: Exposes endpoints for task management and work submission
-- **Miner Service**: Simulates AI agents performing work (the "miners")
-- **Token Contract**: ERC-20 + custom logic for work-based minting (foundry)
-- **Shared Contracts**: Common Solidity libraries
+- Wallet service
+- Transaction service
+- Blockchain service
+- Miner service
 
-## POC Scope and Non-Goals
+## POC Scope and Non-Goals (AI Work Token)
 
-- **In Scope**: Basic monorepo structure, Docker setup, smart contract skeleton, token reward simulation
+- **In Scope**: Basic monorepo structure, Docker setup, service skeletons, AI agent experiments
 - **Non-Goals**: Production readiness, real economic value, complex AI evaluation models (this is a starting point)
 
-## Getting Started
+## Running with Docker Compose
 
-See the original instructions for running the services with Docker Compose, testing, etc.
+The base `docker-compose.yml` intentionally does **not** publish service ports to the
+host. This keeps services internal to the Docker network by default.
 
-## Future Directions
+To expose services on localhost for manual testing:
+
+1. Copy the example override file:
+
+   ```bash
+   cp docker-compose.override.yaml.example docker-compose.override.yaml
+   ```
+
+2. Start the stack (Compose automatically loads both files):
+
+   ```bash
+   docker compose up --build
+   ```
+
+3. Access services on localhost:
+   - Wallet: `http://127.0.0.1:8000`
+   - Transaction: `http://127.0.0.1:8001`
+   - Blockchain: `http://127.0.0.1:8002`
+   - Miner: `http://127.0.0.1:8003`
+
+4. Stop services:
+
+   ```bash
+   docker compose down
+   ```
+
+## Future Directions (AI Work Token)
 
 - Advanced AI agent orchestration
 - On-chain work verification
 - Decentralized review mechanisms
-- Integration with real LLM providers for autonomous contributions
 
----
+## Running Tests
 
-*Original technical content preserved below for reference:*
+### Unit tests
 
-## Project Structure (Monorepo)
-
-```
-penr-oz-crypto-token-coin/
-├── api-service/          # Node.js/Express API
-├── miner-service/        # Python AI worker simulation
-├── contracts/            # Foundry project for Solidity
-├── shared-contracts/     # Reusable contract libs
-├── docker-compose.yml
-└── README.md
-```
-
-## Quick Start
+Unit tests run against each service in isolation and do not require running services:
 
 ```bash
-docker-compose up --build
+poetry run pytest -m "not integration"
 ```
 
-Run tests:
-```bash
-# API tests
-cd api-service && npm test
+### Integration tests
 
-# Contract tests
-cd contracts && forge test
-```
+The `tests/` directory contains an end-to-end integration test that validates the full
+Wallet → Transaction → Miner → Blockchain flow using real HTTP calls. All four services
+must be running before you execute these tests.
 
-(Full original details preserved in the first commit.)
+(See the main branch for complete instructions.)
