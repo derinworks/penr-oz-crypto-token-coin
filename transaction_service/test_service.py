@@ -67,3 +67,40 @@ def test_clear_transactions():
 
     response = client.get("/transaction/pending")
     assert response.json()["transactions"] == []
+
+
+def test_get_pending_transactions_pagination():
+    """Test pagination behavior on GET /transaction/pending (issue #17)."""
+    # Seed 5 transactions
+    for i in range(5):
+        payload = {
+            "sender": f"S{i}",
+            "receiver": f"R{i}",
+            "amount": float(i + 1),
+        }
+        client.post("/transaction/send", json=payload)
+
+    # Default call (no params) -> returns all + metadata
+    response = client.get("/transaction/pending")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["transactions"]) == 5
+    assert data["total"] == 5
+    assert data["skip"] == 0
+    assert data["limit"] is None
+
+    # limit=2
+    response = client.get("/transaction/pending?limit=2")
+    data = response.json()
+    assert len(data["transactions"]) == 2
+    assert data["total"] == 5
+    assert data["skip"] == 0
+    assert data["limit"] == 2
+
+    # skip=2, limit=2
+    response = client.get("/transaction/pending?skip=2&limit=2")
+    data = response.json()
+    assert len(data["transactions"]) == 2
+    assert data["transactions"][0]["sender"] == "S2"
+    assert data["skip"] == 2
+    assert data["limit"] == 2
