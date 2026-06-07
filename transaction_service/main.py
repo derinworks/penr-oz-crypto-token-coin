@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 
 from shared.contracts import PendingTransactionsResponse
 from shared.models.transaction import Transaction
@@ -35,8 +35,36 @@ def send_transaction(transaction: Transaction):
 
 
 @app.get("/transaction/pending", response_model=PendingTransactionsResponse)
-def get_pending_transactions():
-    return PendingTransactionsResponse(transactions=pending_transactions)
+def get_pending_transactions(
+    skip: int = Query(
+        0, ge=0, description="Number of pending transactions to skip for pagination"
+    ),
+    limit: Optional[int] = Query(
+        None,
+        ge=1,
+        le=1000,
+        description="Maximum number of pending transactions to return (default: all)",
+    ),
+):
+    """Return pending transactions, optionally paginated.
+
+    This is an optional enhancement per issue #17.
+
+    - When `limit` is omitted (or None), all pending transactions from `skip` onward
+      are returned (full backward compatibility).
+    - `skip` defaults to 0.
+    """
+    total = len(pending_transactions)
+    start = skip
+    end = start + limit if limit is not None else None
+    paginated_transactions = pending_transactions[start:end]
+
+    return PendingTransactionsResponse(
+        transactions=paginated_transactions,
+        total=total,
+        skip=skip,
+        limit=limit,
+    )
 
 
 @app.post("/transaction/clear")

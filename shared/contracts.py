@@ -8,7 +8,7 @@ HTTP endpoints, ensuring consistent data exchange between:
   - Wallet Service -> Blockchain Service
 """
 
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -19,9 +19,17 @@ from .models.transaction import Transaction
 
 
 class PendingTransactionsResponse(BaseModel):
-    """GET /transaction/pending response contract."""
+    """GET /transaction/pending response contract.
+
+    Supports optional pagination. Use query params `skip` and `limit` on the
+    GET /transaction/pending endpoint to paginate results.
+    The response includes `total`, `skip`, and `limit` for client-side handling.
+    """
 
     transactions: List[Transaction]
+    total: Optional[int] = None
+    skip: Optional[int] = None
+    limit: Optional[int] = None
 
 
 # --- Blockchain Service Contracts ---
