@@ -1,5 +1,7 @@
 """Unit tests for the deterministic reward engine."""
 
+import math
+
 import pytest
 from pydantic import ValidationError
 
@@ -61,6 +63,15 @@ class TestRewardPolicy:
             RewardPolicy(min_score=-0.1)
         with pytest.raises(ValidationError):
             RewardPolicy(min_score=1.1)
+
+    def test_max_reward_must_be_finite(self):
+        """Non-finite rewards would mint unbounded, unserializable amounts."""
+        with pytest.raises(ValidationError):
+            RewardPolicy(max_reward=math.inf)
+        with pytest.raises(ValidationError):
+            RewardPolicy(max_reward=-math.inf)
+        with pytest.raises(ValidationError):
+            RewardPolicy(max_reward=math.nan)
 
     def test_immutability(self):
         policy = RewardPolicy()
@@ -163,6 +174,37 @@ class TestDecideReward:
         assert approved.reward_amount == 90.0
         assert rejected.approved is False
         assert rejected.reward_amount == 0.0
+
+    def test_zero_amount_is_never_approved(self):
+        """A permissive threshold must not approve a zero-value reward."""
+        policy = RewardPolicy(min_score=0.0)
+        decision = decide_reward(make_evaluation(0.0), make_submission(), policy)
+        assert decision.reward_amount == 0.0
+        assert decision.approved is False
+        assert "non-positive" in decision.reason
+
+    def test_amount_rounding_to_zero_is_not_approved(self):
+        """A reward that rounds down to zero must not be approved either."""
+        policy = RewardPolicy(max_reward=1e-9)
+        decision = decide_reward(make_evaluation(0.1), make_submission(), policy)
+        assert decision.reward_amount == 0.0
+        assert decision.approved is False
+        assert "non-positive" in decision.reason
+
+    def test_approved_implies_positive_amount(self):
+        """The core invariant the transaction service depends on."""
+        for min_score in (0.0, 0.1, 0.5):
+            policy = RewardPolicy(min_score=min_score)
+            for score in ALLOWED_SCORES:
+                decision = decide_reward(
+                    make_evaluation(score), make_submission(), policy
+                )
+                if decision.approved:
+                    assert decision.reward_amount > 0
+
+    def test_reward_amount_is_always_finite(self):
+        decision = decide_reward(make_evaluation(1.0), make_submission())
+        assert math.isfinite(decision.reward_amount)
 
     def test_mismatched_submission_rejected(self):
         evaluation = make_evaluation(0.8, submission_id="sub-2")

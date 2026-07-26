@@ -23,6 +23,12 @@ where:
 The product is rounded to :data:`REWARD_PRECISION` decimal places so that
 binary floating-point artifacts never leak into token amounts.
 
+A decision is *approved* only when the resulting amount is strictly
+positive. This keeps the engine consistent with the transaction service,
+which rejects transfers of a non-positive amount, and covers the cases
+where a zero score or a very small ``max_reward`` rounds the reward down
+to zero.
+
 Determinism Guarantee
 ---------------------
 Reward amounts derive exclusively from the evaluation's normalized score and
@@ -67,13 +73,15 @@ class RewardPolicy(BaseModel, frozen=True):
     Attributes
     ----------
     max_reward:
-        Fixed maximum token reward per task. Must be > 0.
+        Fixed maximum token reward per task. Must be a finite number > 0;
+        ``inf`` and ``NaN`` are rejected so that a policy can never mint an
+        unbounded token amount or one that fails JSON serialization.
     min_score:
         Minimum normalized score (inclusive) required for a reward to be
         issued. Must lie in ``[0.0, 1.0]``.
     """
 
-    max_reward: float = Field(default=DEFAULT_MAX_REWARD, gt=0)
+    max_reward: float = Field(default=DEFAULT_MAX_REWARD, gt=0, allow_inf_nan=False)
     min_score: float = Field(default=DEFAULT_MIN_SCORE, ge=0.0, le=1.0)
 
 
@@ -147,9 +155,11 @@ def decide_reward(
     -------
     RewardDecision
         Approved with ``reward_amount = normalized_score * max_reward`` when
-        the score meets ``policy.min_score``; otherwise rejected with a zero
-        reward. The ``reason`` field records the applied formula inputs and
-        the decision's ``decision_id`` is ``"reward-<evaluation_id>"``.
+        the score meets ``policy.min_score`` and that amount is strictly
+        positive; otherwise rejected with a zero reward. The ``reason``
+        field records the applied formula inputs or why no reward was
+        issued, and the decision's ``decision_id`` is
+        ``"reward-<evaluation_id>"``.
 
     Raises
     ------
@@ -165,7 +175,10 @@ def decide_reward(
         )
 
     reward_amount = compute_reward(evaluation.normalized_score, policy)
-    approved = evaluation.normalized_score >= policy.min_score
+    # A decision is only approved when it carries a payable amount: the
+    # transaction service rejects non-positive amounts, so an "approved"
+    # zero-value decision would be internally inconsistent.
+    approved = reward_amount > 0
 
     if approved:
         reason = (
@@ -173,10 +186,15 @@ def decide_reward(
             f"min_score {policy.min_score}; reward = "
             f"{evaluation.normalized_score} * {policy.max_reward}"
         )
-    else:
+    elif evaluation.normalized_score < policy.min_score:
         reason = (
             f"normalized_score {evaluation.normalized_score} below "
             f"min_score {policy.min_score}; no reward issued"
+        )
+    else:
+        reason = (
+            f"normalized_score {evaluation.normalized_score} yields a "
+            "non-positive reward amount; no reward issued"
         )
 
     return RewardDecision(
