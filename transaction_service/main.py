@@ -1,3 +1,4 @@
+import math
 from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
@@ -17,6 +18,17 @@ def health():
 
 @app.post("/transaction/send")
 def send_transaction(transaction: Transaction):
+    # Reject non-finite amounts (inf/-inf/nan) here, in application logic,
+    # rather than via a pydantic field constraint: a value like 1e400
+    # silently overflows to +inf during JSON parsing and, if merely
+    # rejected via `Field(allow_inf_nan=False)`, would crash FastAPI's own
+    # default validation-error handler when it tries to JSON-serialize the
+    # rejected inf/nan value back in the error detail (Starlette's
+    # JSONResponse uses allow_nan=False). An HTTPException with a plain
+    # string detail always serializes safely.
+    if not math.isfinite(transaction.amount):
+        raise HTTPException(status_code=400, detail="Amount must be a finite number")
+
     if transaction.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be greater than 0")
 

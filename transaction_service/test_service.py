@@ -58,6 +58,48 @@ def test_send_transaction_empty_address():
     assert response.status_code == 400
 
 
+def test_send_transaction_overflow_amount_rejected():
+    """Regression test: amount 1e400 silently overflows to +inf during JSON
+    parsing. Before the fix, this was accepted (inf > 0), stored, and then
+    crashed GET /transaction/pending with an unhandled
+    ``ValueError: Out of range float values are not JSON compliant`` when
+    Starlette tried to serialize the infinite amount. It must now be
+    rejected up front with a clean 400, and must never reach the pending
+    pool.
+    """
+    response = client.post(
+        "/transaction/send",
+        content='{"sender": "Eve", "receiver": "Mallory", "amount": 1e400}',
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Amount must be a finite number"}
+
+    # The bad transaction must not have been stored, and this call itself
+    # must not raise / return a 5xx.
+    response = client.get("/transaction/pending")
+    assert response.status_code == 200
+    assert response.json()["transactions"] == []
+
+
+def test_send_transaction_nan_amount_rejected():
+    """NaN previously evaded the `amount <= 0` check entirely (NaN
+    comparisons are always False) and was silently accepted, causing the
+    same downstream crash as the overflow case.
+    """
+    response = client.post(
+        "/transaction/send",
+        content='{"sender": "Eve", "receiver": "Mallory", "amount": NaN}',
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Amount must be a finite number"}
+
+    response = client.get("/transaction/pending")
+    assert response.status_code == 200
+    assert response.json()["transactions"] == []
+
+
 def test_clear_transactions():
     payload = {"sender": "Alice", "receiver": "Bob", "amount": 10.0}
     client.post("/transaction/send", json=payload)
